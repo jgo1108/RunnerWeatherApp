@@ -6,25 +6,10 @@
   "scripts": {
     "start": "node index.js"
   },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "express": "^4.18.2"
   }
 }
-```
-
-## 2. Push to GitHub
-Follow the GitHub steps from before to get your code into a repo.
-
-## 3. Deploy on Railway
-1. Go to [railway.app](https://railway.app) and sign in with GitHub
-2. Click **"New Project"** → **"Deploy from GitHub repo"**
-3. Select your `runners-weather` repo
-4. Click **"Add Variable"** and add:
-   - Key: `ANTHROPIC_API_KEY`
-   - Value: your Anthropic API key
-5. Railway auto-detects Node and deploys — takes about 1 minute
-
-## 4. Get your URL
-Once deployed, go to **Settings → Networking → Generate Domain** and Railway gives you a URL like `https://runners-weather.up.railway.app`. Your Join39 endpoint would be:
-```
-https://runners-weather.up.railway.app/api/weather

@@ -3,7 +3,6 @@ import express from 'express';
 const app = express();
 app.use(express.json());
 
-// Health check
 app.get('/', (req, res) => {
   res.json({ status: 'ok' });
 });
@@ -18,22 +17,19 @@ app.post('/api/weather', async (req, res) => {
       headers: {
         "Content-Type": "application/json",
         "x-api-key": process.env.ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01"
+        "anthropic-version": "2023-06-01",
+        "anthropic-beta": "web-search-2025-03-05"
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
         max_tokens: 1500,
         tools: [{ type: "web_search_20250305", name: "web_search" }],
-        system: `You are a running coach and weather expert. Search for current weather and respond ONLY with valid JSON. Include: city, temperature_c, temperature_f, feels_like_c, feels_like_f, condition, humidity, wind, visibility, uv_index, summary (runner-focused), and gear array (each item: icon emoji, name, reason, priority: must/recommended/optional).`,
+        system: `You are a running coach and weather expert. Search for current weather and respond ONLY with a valid JSON object. No prose, no explanation, no markdown, no backticks. Start your response with { and end with }. Include these fields: city, temperature_c, temperature_f, feels_like_c, feels_like_f, condition, humidity, wind, visibility, uv_index, summary (one runner-focused sentence), and gear array (each item has: icon, name, reason, priority which is must/recommended/optional).`,
         messages: [{ role: "user", content: `Current weather for runners in: ${query}` }]
       })
     });
 
     const data = await response.json();
-
-    // Log what Anthropic returned so we can debug
-    console.log("Anthropic status:", response.status);
-    console.log("Anthropic response:", JSON.stringify(data).slice(0, 500));
 
     if (data.error) {
       return res.status(500).json({ error: data.error.message });
@@ -41,13 +37,16 @@ app.post('/api/weather', async (req, res) => {
 
     const textBlock = data.content?.find(b => b.type === "text");
     const raw = textBlock?.text || "";
-    const clean = raw.replace(/```json|```/g, "").trim();
 
-    if (!clean) {
-      return res.status(500).json({ error: "Empty response from Anthropic", raw: JSON.stringify(data).slice(0, 300) });
+    // Extract JSON even if there's surrounding text
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.error("No JSON found in response:", raw.slice(0, 300));
+      return res.status(500).json({ error: "No JSON in response", raw: raw.slice(0, 300) });
     }
 
-    res.status(200).json({ result: JSON.parse(clean) });
+    const parsed = JSON.parse(jsonMatch[0]);
+    res.status(200).json({ result: parsed });
 
   } catch (err) {
     console.error("Error:", err.message);
